@@ -1,6 +1,8 @@
 #include <LiquidCrystal.h>
 
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+int fanspeedpin = 9;
+int mosfetpin = 8;
 
 byte load[8] = {
   B00000,
@@ -53,13 +55,28 @@ void setup() {
   lcd.createChar(2, temp);
   lcd.createChar(3, download);
   lcd.begin(16, 2);
-  Serial.begin(9600);  
-  pinMode(9,OUTPUT);
-  digitalWrite(9,LOW);
+  Serial.begin(9600);    
+  pinMode(6, INPUT_PULLUP);
+  pinMode(mosfetpin, OUTPUT);
+  digitalWrite(mosfetpin, LOW);
+  pinMode(fanspeedpin, OUTPUT);
+  analogWrite(fanspeedpin, 0);
   lcd.write("-----NODATA-----");
 }
 
+int s = 0;
+
 void loop() {
+  if (digitalRead(6) == LOW && s == 0)
+  {
+    Serial.println("shutdown");
+    s = 1;  
+  }
+  else if (digitalRead(6) == HIGH && s == 1)
+  {
+    s = 0;
+  }
+
   if (Serial.available() > 0) { 
     processIncomingByte (Serial.read ()); 
   } 
@@ -80,7 +97,22 @@ void process_data (const char * data)
   else if (!strcmp(data,"tempsymbol"))
     lcd.write((byte)2);    
   else if (!strcmp(data,"downloadsymbol"))
-    lcd.write((byte)3);    
+    lcd.write((byte)3);   
+  else if (!strcmp(data,"fanstart"))
+  {
+    digitalWrite(mosfetpin, HIGH);
+    analogWrite(fanspeedpin, 50);
+  }
+  else if (!strcmp(data,"fanstop"))
+    digitalWrite(mosfetpin, LOW);  
+  else if (!strcmp(data,"fanmin"))
+    analogWrite(fanspeedpin, 0);
+  else if (!strcmp(data,"fanlow"))
+    analogWrite(fanspeedpin, 50);
+  else if (!strcmp(data,"fanmedium"))
+    analogWrite(fanspeedpin, 150);
+  else if (!strcmp(data,"fanfast"))
+    analogWrite(fanspeedpin, 255);
   else lcd.write(data);
 }
 
@@ -109,11 +141,5 @@ void processIncomingByte (const byte inByte)
     break;
   } 
 }
-
-
-
-
-
-
 
 
